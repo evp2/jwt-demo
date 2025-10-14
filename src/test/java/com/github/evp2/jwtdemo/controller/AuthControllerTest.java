@@ -6,49 +6,62 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest({ AuthController.class })
-@Import({ SecurityConfig.class, TokenService.class })
+@WebMvcTest({AuthController.class})
+@Import({SecurityConfig.class, TokenService.class})
 class AuthControllerTest {
 
-	@Autowired
-	MockMvc mvc;
 
-	@Test
-	void tokenWhenAnonymousThenStatusIsUnauthorized() throws Exception {
-		this.mvc.perform(post("/token")).andExpect(status().isUnauthorized());
-	}
+  @Autowired
+  MockMvc mvc;
 
-	@Test
-	void tokenWithBasicThenGetToken() throws Exception {
-		MvcResult result = this.mvc.perform(post("/token").with(httpBasic("evp2", "password"))).andExpect(status().isOk()).andReturn();
+  @Test
+  void shouldReturnJwtWithValidUserCredentials() throws Exception {
+    this.mvc.perform(post("/token")
+            .with(httpBasic("evp2", "password")))
+        .andExpect(status().isOk());
+  }
 
-		assertThat(result.getResponse().getContentAsString()).isNotEmpty();
-	}
+  @Test
+  void shouldReturnUnauthorizedWithInValidUserCredentials() throws Exception {
+    this.mvc.perform(post("/token")
+            .with(httpBasic("admin", "admin")))
+        .andExpect(status().isUnauthorized());
+  }
 
-	@Test
-	void rootWhenUnauthenticatedThen401() throws Exception {
-		this.mvc.perform(get("/")).andExpect(status().isUnauthorized());
-	}
 
-	@Test
-	public void rootWithBasicStatusIsUnauthorized() throws Exception {
-		this.mvc.perform(get("/").with(httpBasic("evp2", "password"))).andExpect(status().isUnauthorized());
-	}
+  @Test
+  void shouldReturnUnauthorizedWithNoJwt() throws Exception {
+    this.mvc.perform(get("/")).andExpect(status().isUnauthorized());
+  }
 
-	@Test
-	@WithMockUser
-	public void rootWithMockUserStatusIsOK() throws Exception {
-		this.mvc.perform(get("/")).andExpect(status().isOk());
-	}
+  @Test
+  void shouldReturnUnauthorizedWithInvalidJwt() throws Exception {
+    this.mvc.perform(get("/").header(HttpHeaders.AUTHORIZATION, "Bearer ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void shouldReturnWelcomeMessageWithValidJwt() throws Exception {
+    MvcResult result = this.mvc.perform(post("/token").with(httpBasic("evp2", "password"))).andReturn();
+    String jwt = result.getResponse().getContentAsString();
+    assertThat(jwt).isNotEmpty();
+
+    MvcResult response = this.mvc.perform(get("/").header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    assertEquals("Hello, evp2", response.getResponse().getContentAsString());
+  }
 
 }

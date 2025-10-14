@@ -2,6 +2,8 @@ package com.github.evp2.jwtdemo.service;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
@@ -24,6 +26,7 @@ public class TokenService {
     Instant now = Instant.now();
     String scope = authentication.getAuthorities().stream()
         .map(GrantedAuthority::getAuthority)
+        .filter(authority -> !authority.startsWith("ROLE"))
         .collect(Collectors.joining(" "));
     JwtClaimsSet claims = JwtClaimsSet.builder()
         .issuer("self")
@@ -32,7 +35,8 @@ public class TokenService {
         .subject(authentication.getName())
         .claim("scope", scope)
         .build();
-    return this.encoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+    JwtEncoderParameters encoderParameters = JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS512).build(), claims);
+    return this.encoder.encode(encoderParameters).getTokenValue();
   }
 
 }
