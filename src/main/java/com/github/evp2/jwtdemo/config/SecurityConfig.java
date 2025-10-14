@@ -44,25 +44,6 @@ public class SecurityConfig {
   private String jwtKey;
 
   @Bean
-  DataSource dataSource() {
-    return new EmbeddedDatabaseBuilder()
-        .setType(H2)
-        .addScript(JdbcDaoImpl.DEFAULT_USER_SCHEMA_DDL_LOCATION)
-        .build();
-  }
-
-  @Bean
-  public UserDetailsManager users(DataSource dataSource) {
-    UserDetails user = User.withUsername("evp2")
-        .password("{noop}password")
-        .authorities("READ", "ROLE_USER")
-        .build();
-    JdbcUserDetailsManager users = new JdbcUserDetailsManager(dataSource);
-    users.createUser(user);
-    return users;
-  }
-
-  @Bean
   public AuthenticationManager authenticationManager(UserDetailsManager users) {
     DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
     authProvider.setUserDetailsService(users);
@@ -115,5 +96,24 @@ public class SecurityConfig {
     byte[] bytes = jwtKey.getBytes();
     SecretKeySpec originalKey = new SecretKeySpec(bytes, 0, bytes.length, "RSA");
     return NimbusJwtDecoder.withSecretKey(originalKey).macAlgorithm(MacAlgorithm.HS512).build();
+  }
+
+  @Bean
+  DataSource dataSource() {
+    return new EmbeddedDatabaseBuilder()
+        .setType(H2)
+        .addScript(JdbcDaoImpl.DEFAULT_USER_SCHEMA_DDL_LOCATION)
+        .build();
+  }
+
+  @Bean
+  public UserDetailsManager users(DataSource dataSource) {
+    UserDetails user = User.withUsername("evp2")
+        .password("{noop}password")
+        .authorities("READ", "ROLE_USER")
+        .build();
+    JdbcUserDetailsManager users = new JdbcUserDetailsManager(dataSource);
+    users.createUser(user);
+    return users;
   }
 }
