@@ -1,7 +1,10 @@
 package com.github.evp2.jwtdemo.controller;
 
 import com.github.evp2.jwtdemo.model.LoginRequest;
+import com.github.evp2.jwtdemo.model.RegisterRequest;
+import com.github.evp2.jwtdemo.service.RegisterService;
 import com.github.evp2.jwtdemo.service.TokenService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,10 +24,16 @@ public class AuthController {
   private static final Logger LOG = LoggerFactory.getLogger(AuthController.class);
 
   private final AuthenticationManager authenticationManager;
+  private final RegisterService registerService;
   private final TokenService tokenService;
 
-  public AuthController(AuthenticationManager authenticationManager, TokenService tokenService) {
+  public AuthController(
+      AuthenticationManager authenticationManager,
+      RegisterService registerService,
+      TokenService tokenService
+  ) {
     this.authenticationManager = authenticationManager;
+    this.registerService = registerService;
     this.tokenService = tokenService;
   }
 
@@ -33,10 +42,10 @@ public class AuthController {
     return "Hello, " + principal.getName();
   }
 
-  @PreAuthorize("hasAuthority('SCOPE_read')")
+  @PreAuthorize("hasAuthority('SCOPE_READ')")
   @GetMapping("/authorizations")
-  public String authorizations() {
-    return "User has 'read' scope.";
+  public String authorizations(Authentication authentication) {
+    return String.format("User authorizations: %s", authentication.getAuthorities());
   }
 
   @PostMapping("/token")
@@ -60,6 +69,19 @@ public class AuthController {
     String token = tokenService.generateToken(authentication);
     LOG.debug("Login JWT Token: {}", token);
     return token;
+  }
+
+  @PostMapping("/register")
+  public String register(@RequestBody RegisterRequest registerRequest, HttpServletResponse response) {
+    LOG.info("Register attempt for user: '{}'", registerRequest.username());
+    try {
+      registerService.registerUser(registerRequest);
+    } catch (Exception e) {
+      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      return "Error: " + e.getMessage();
+    }
+    LOG.info("User {} registered successfully", registerRequest.username());
+    return String.format("Welcome, %s", registerRequest.username());
   }
 
 }

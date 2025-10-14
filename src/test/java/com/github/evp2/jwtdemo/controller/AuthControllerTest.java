@@ -1,7 +1,9 @@
 package com.github.evp2.jwtdemo.controller;
 
 import com.github.evp2.jwtdemo.config.SecurityConfig;
+import com.github.evp2.jwtdemo.service.RegisterService;
 import com.github.evp2.jwtdemo.service.TokenService;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -18,9 +20,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest({AuthController.class})
-@Import({SecurityConfig.class, TokenService.class})
+@Import({SecurityConfig.class, RegisterService.class, TokenService.class})
 class AuthControllerTest {
-
 
   @Autowired
   MockMvc mvc;
@@ -39,6 +40,95 @@ class AuthControllerTest {
         .andExpect(status().isUnauthorized());
   }
 
+  @Test
+  @Order(value = 1)
+  void shouldReturnTokenAfterValidRegister() throws Exception {
+    this.mvc.perform(post("/register")
+        .contentType(
+            "application/json"
+        )
+        .content(
+            """
+          {
+            "username": "test",
+            "email": "test@email.com",
+            "password": "password"
+          }
+        """
+        )).andExpect(status().isOk());
+    MvcResult result = this.mvc.perform(post("/login")
+            .contentType(
+                "application/json"
+            )
+            .content(
+                """
+                  {
+                    "username": "test",
+                    "password": "password"
+                  }
+                """
+            )).andReturn();
+    String jwt = result.getResponse().getContentAsString();
+    assertThat(jwt).isNotEmpty();
+    MvcResult response = this.mvc.perform(get("/").header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    assertEquals("Hello, test", response.getResponse().getContentAsString());
+  }
+
+  @Test
+  @Order(value = 2)
+  public void shouldReturnErrorIfUserAlreadyExists() throws Exception {
+    this.mvc.perform(post("/register")
+        .contentType(
+            "application/json"
+        )
+        .content(
+            """
+          {
+            "username": "test",
+            "email": "test@email.com",
+            "password": "password"
+          }
+        """
+        )).andExpect(status().is4xxClientError());
+  }
+
+
+  @Test
+  void shouldReturnTokenWithUsernameAndPassword() throws Exception {
+    this.mvc.perform(post("/login")
+            .contentType(
+                "application/json"
+            )
+            .content(
+                """
+                  {
+                    "username": "evp2",
+                    "password": "password"
+                  }
+                """
+            ))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void shouldReturnUnauthorizedWithInvalidUsernameAndPassword() throws Exception {
+    this.mvc.perform(post("/login")
+            .contentType(
+                "application/json"
+            )
+            .content(
+                """
+                  {
+                    "username": "admin",
+                    "password": "admin"
+                  }
+                """
+            ))
+        .andExpect(status().isUnauthorized());
+  }
 
   @Test
   void shouldReturnUnauthorizedWithNoJwt() throws Exception {
@@ -63,5 +153,4 @@ class AuthControllerTest {
 
     assertEquals("Hello, evp2", response.getResponse().getContentAsString());
   }
-
 }
