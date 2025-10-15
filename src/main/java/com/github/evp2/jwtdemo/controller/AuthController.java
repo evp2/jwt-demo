@@ -5,6 +5,7 @@ import com.github.evp2.jwtdemo.model.RegisterRequest;
 import com.github.evp2.jwtdemo.service.RegisterService;
 import com.github.evp2.jwtdemo.service.TokenService;
 import jakarta.servlet.http.HttpServletResponse;
+import java.security.Principal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,13 +17,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.security.Principal;
-
 @RestController
 public class AuthController {
-
   private static final Logger LOG = LoggerFactory.getLogger(AuthController.class);
-
   private final AuthenticationManager authenticationManager;
   private final RegisterService registerService;
   private final TokenService tokenService;
@@ -30,8 +27,7 @@ public class AuthController {
   public AuthController(
       AuthenticationManager authenticationManager,
       RegisterService registerService,
-      TokenService tokenService
-  ) {
+      TokenService tokenService) {
     this.authenticationManager = authenticationManager;
     this.registerService = registerService;
     this.tokenService = tokenService;
@@ -59,12 +55,10 @@ public class AuthController {
   @PostMapping("/login")
   public String login(@RequestBody LoginRequest loginRequest) {
     LOG.info("Login attempt for user: '{}'", loginRequest.username());
-    Authentication authentication = authenticationManager.authenticate(
-        new UsernamePasswordAuthenticationToken(
-            loginRequest.username(),
-            loginRequest.password()
-        )
-    );
+    Authentication authentication =
+        authenticationManager.authenticate(
+            new UsernamePasswordAuthenticationToken(
+                loginRequest.username(), loginRequest.password()));
     LOG.debug("User {} authenticated successfully", authentication.getName());
     String token = tokenService.generateToken(authentication);
     LOG.debug("Login JWT Token: {}", token);
@@ -72,7 +66,8 @@ public class AuthController {
   }
 
   @PostMapping("/register")
-  public String register(@RequestBody RegisterRequest registerRequest, HttpServletResponse response) {
+  public String register(
+      @RequestBody RegisterRequest registerRequest, HttpServletResponse response) {
     LOG.info("Register attempt for user: '{}'", registerRequest.username());
     try {
       registerService.registerUser(registerRequest);
@@ -83,5 +78,4 @@ public class AuthController {
     LOG.info("User {} registered successfully", registerRequest.username());
     return String.format("Welcome, %s", registerRequest.username());
   }
-
 }
