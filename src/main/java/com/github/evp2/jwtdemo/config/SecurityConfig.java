@@ -1,6 +1,11 @@
 package com.github.evp2.jwtdemo.config;
 
+import static org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType.H2;
+import static org.springframework.security.config.Customizer.withDefaults;
+
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import javax.crypto.spec.SecretKeySpec;
+import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,12 +35,6 @@ import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
-import javax.crypto.spec.SecretKeySpec;
-import javax.sql.DataSource;
-
-import static org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType.H2;
-import static org.springframework.security.config.Customizer.withDefaults;
-
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -52,18 +51,23 @@ public class SecurityConfig {
 
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    return http
-        .csrf(AbstractHttpConfigurer::disable)
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers(new AntPathRequestMatcher("/login")).permitAll()
-            .requestMatchers(new AntPathRequestMatcher("/register")).permitAll()
-            .anyRequest().hasAuthority("SCOPE_READ")
-        )
-        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+    return http.csrf(AbstractHttpConfigurer::disable)
+        .authorizeHttpRequests(
+            auth ->
+                auth.requestMatchers(new AntPathRequestMatcher("/login"))
+                    .permitAll()
+                    .requestMatchers(new AntPathRequestMatcher("/register"))
+                    .permitAll()
+                    .anyRequest()
+                    .hasAuthority("SCOPE_READ"))
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt)
         .exceptionHandling(
-            (ex) -> ex.authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint())
-                .accessDeniedHandler(new BearerTokenAccessDeniedHandler()))
+            (ex) -> {
+              ex.authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint());
+              ex.accessDeniedHandler(new BearerTokenAccessDeniedHandler());
+            })
         .build();
   }
 
@@ -72,22 +76,23 @@ public class SecurityConfig {
    */
   @Order(Ordered.HIGHEST_PRECEDENCE)
   @Bean
-  SecurityFilterChain tokenSecurityFilterChain(HttpSecurity http) throws Exception {
-    return http
-        .securityMatcher(new AntPathRequestMatcher("/token"))
+  public SecurityFilterChain tokenSecurityFilterChain(HttpSecurity http) throws Exception {
+    return http.securityMatcher(new AntPathRequestMatcher("/token"))
         .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
-        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .csrf(AbstractHttpConfigurer::disable)
-        .exceptionHandling(ex -> {
-          ex.authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint());
-          ex.accessDeniedHandler(new BearerTokenAccessDeniedHandler());
-        })
+        .exceptionHandling(
+            (ex) -> {
+              ex.authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint());
+              ex.accessDeniedHandler(new BearerTokenAccessDeniedHandler());
+            })
         .httpBasic(withDefaults())
         .build();
   }
 
   @Bean
-  JwtEncoder jwtEncoder() {
+  public JwtEncoder jwtEncoder() {
     return new NimbusJwtEncoder(new ImmutableSecret<>(jwtKey.getBytes()));
   }
 
@@ -99,7 +104,7 @@ public class SecurityConfig {
   }
 
   @Bean
-  DataSource dataSource() {
+  public DataSource dataSource() {
     return new EmbeddedDatabaseBuilder()
         .setType(H2)
         .addScript(JdbcDaoImpl.DEFAULT_USER_SCHEMA_DDL_LOCATION)
@@ -108,10 +113,11 @@ public class SecurityConfig {
 
   @Bean
   public UserDetailsManager users(DataSource dataSource) {
-    UserDetails user = User.withUsername("evp2")
-        .password("{noop}password")
-        .authorities("READ", "ROLE_USER")
-        .build();
+    UserDetails user =
+        User.withUsername("evp2")
+            .password("{noop}password")
+            .authorities("READ", "ROLE_USER")
+            .build();
     JdbcUserDetailsManager users = new JdbcUserDetailsManager(dataSource);
     users.createUser(user);
     return users;
