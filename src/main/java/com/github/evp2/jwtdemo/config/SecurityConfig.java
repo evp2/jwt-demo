@@ -9,6 +9,7 @@ import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
@@ -23,6 +24,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.jdbc.JdbcDaoImpl;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -72,10 +75,10 @@ public class SecurityConfig {
   }
 
   /*
-   * Allow the token endpoint to use basic auth and everything else uses the above filter chain
+   * Allow the token endpoint to use basic auth and everything else uses the default filter chain
    */
-  @Order(Ordered.HIGHEST_PRECEDENCE)
   @Bean
+  @Order(Ordered.HIGHEST_PRECEDENCE)
   public SecurityFilterChain tokenSecurityFilterChain(HttpSecurity http) throws Exception {
     return http.securityMatcher(new AntPathRequestMatcher("/token"))
         .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
@@ -88,6 +91,17 @@ public class SecurityConfig {
               ex.accessDeniedHandler(new BearerTokenAccessDeniedHandler());
             })
         .httpBasic(withDefaults())
+        .build();
+  }
+
+  @Profile({"dev"})
+  @Bean
+  @Order(Ordered.HIGHEST_PRECEDENCE)
+  public SecurityFilterChain h2ConsoleSecurityFilterChain(HttpSecurity http) throws Exception {
+    return http.securityMatcher(new AntPathRequestMatcher("/h2-console/**"))
+        .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+        .csrf(csrf -> csrf.ignoringRequestMatchers(new AntPathRequestMatcher("/h2-console/**")))
+        .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
         .build();
   }
 
@@ -112,14 +126,19 @@ public class SecurityConfig {
   }
 
   @Bean
-  public UserDetailsManager users(DataSource dataSource) {
+  public UserDetailsManager users(DataSource dataSource, PasswordEncoder passwordEncoder) {
     UserDetails user =
         User.withUsername("evp2")
-            .password("{noop}password")
-            .authorities("READ", "ROLE_USER")
+            .password(passwordEncoder.encode("{noop}password"))
+            .authorities("READ", "ROLE_ADMIN")
             .build();
     JdbcUserDetailsManager users = new JdbcUserDetailsManager(dataSource);
     users.createUser(user);
     return users;
+  }
+
+  @Bean
+  public PasswordEncoder passwordEncoder() {
+    return NoOpPasswordEncoder.getInstance();
   }
 }
