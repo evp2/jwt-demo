@@ -14,11 +14,11 @@ import org.springframework.stereotype.Service;
 public class RegisterService {
   private static final Logger LOG = LoggerFactory.getLogger(RegisterService.class);
   private final UserDetailsManager userDetailsManager;
-  private final DataSource personDataSource;
+  private final DataSource userDetailsDataSource;
 
-  public RegisterService(UserDetailsManager userDetailsManager, DataSource personDataSource) {
+  public RegisterService(UserDetailsManager userDetailsManager, DataSource userDetailsDataSource) {
     this.userDetailsManager = userDetailsManager;
-    this.personDataSource = personDataSource;
+    this.userDetailsDataSource = userDetailsDataSource;
   }
 
   public void registerUser(RegisterRequest registerRequest) throws SQLException {
@@ -35,7 +35,7 @@ public class RegisterService {
             .authorities("READ", "ROLE_USER")
             .build();
     userDetailsManager.createUser(user);
-    personDataSource
+    userDetailsDataSource
         .getConnection()
         .prepareStatement(
             "INSERT INTO user_details (username, email) VALUES ('%s', '%s')"

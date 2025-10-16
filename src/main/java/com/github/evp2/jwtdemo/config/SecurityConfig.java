@@ -126,6 +126,14 @@ public class SecurityConfig {
   }
 
   @Bean
+  public DataSource userDetailsDataSource() {
+    return new EmbeddedDatabaseBuilder()
+        .setType(H2)
+        .addScript("classpath:user_details.ddl")
+        .build();
+  }
+
+  @Bean
   public UserDetailsManager users(DataSource dataSource, PasswordEncoder passwordEncoder) {
     UserDetails user =
         User.withUsername("evp2")
