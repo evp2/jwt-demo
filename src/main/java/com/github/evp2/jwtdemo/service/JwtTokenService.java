@@ -10,19 +10,25 @@ import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
+import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.stereotype.Service;
 
 @Service
-public class TokenService {
+public class JwtTokenService {
 
   private final JwtEncoder encoder;
+  private final UserDetailsManager userDetailsManager;
 
-  public TokenService(JwtEncoder encoder) {
+  public JwtTokenService(JwtEncoder encoder, UserDetailsManager userDetailsManager) {
     this.encoder = encoder;
+    this.userDetailsManager = userDetailsManager;
   }
 
   public String generateToken(Authentication authentication) {
     Instant now = Instant.now();
+    if (!userDetailsManager.userExists(authentication.getName())) {
+      throw new RuntimeException("User does not exist");
+    }
     String scope =
         authentication.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
