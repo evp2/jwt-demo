@@ -1,2 +1,10 @@
 jwt:
   key: 9faa372517ac1d389758d3750fc07acf00f542277f26fec1ce4593e93f64e338
+spring:
+  datasource:
+    generate-unique-name: false
+  h2:
+    console:
+      enabled: true
+  jpa:
+    show-sql: true

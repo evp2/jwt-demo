@@ -12,6 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,14 +24,17 @@ public class AuthController {
   private final AuthenticationManager authenticationManager;
   private final RegisterService registerService;
   private final TokenService tokenService;
+  private final PasswordEncoder passwordEncoder;
 
   public AuthController(
       AuthenticationManager authenticationManager,
       RegisterService registerService,
-      TokenService tokenService) {
+      TokenService tokenService,
+      PasswordEncoder passwordEncoder) {
     this.authenticationManager = authenticationManager;
     this.registerService = registerService;
     this.tokenService = tokenService;
+    this.passwordEncoder = passwordEncoder;
   }
 
   @GetMapping("/")
@@ -58,7 +62,7 @@ public class AuthController {
     Authentication authentication =
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(
-                loginRequest.username(), loginRequest.password()));
+                loginRequest.username(), passwordEncoder.encode(loginRequest.password())));
     LOG.debug("User {} authenticated successfully", authentication.getName());
     String token = tokenService.generateToken(authentication);
     LOG.debug("Login JWT Token: {}", token);
