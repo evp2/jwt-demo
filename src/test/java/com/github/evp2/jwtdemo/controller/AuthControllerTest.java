@@ -7,7 +7,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.github.evp2.jwtdemo.config.DataSourceConfig;
 import com.github.evp2.jwtdemo.config.SecurityConfig;
 import com.github.evp2.jwtdemo.service.RegisterService;
 import com.github.evp2.jwtdemo.service.TokenService;
@@ -21,7 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 @WebMvcTest({AuthController.class})
-@Import({DataSourceConfig.class, SecurityConfig.class, RegisterService.class, TokenService.class})
+@Import({SecurityConfig.class, RegisterService.class, TokenService.class})
 class AuthControllerTest {
 
   @Autowired MockMvc mvc;

@@ -52,7 +52,7 @@ public class AuthController {
   public String token(Authentication authentication) {
     LOG.info("Token requested for user: '{}'", authentication.getName());
     String token = tokenService.generateToken(authentication);
-    LOG.debug("Token granted: {}", token);
+    LOG.debug("Token granted for: {}", authentication.getName());
     return token;
   }
 
@@ -63,9 +63,8 @@ public class AuthController {
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(
                 loginRequest.username(), passwordEncoder.encode(loginRequest.password())));
-    LOG.debug("User {} authenticated successfully", authentication.getName());
     String token = tokenService.generateToken(authentication);
-    LOG.debug("Login JWT Token: {}", token);
+    LOG.debug("User {} authenticated successfully. JWT: {}", authentication.getName(), token);
     return token;
   }
 
@@ -79,7 +78,7 @@ public class AuthController {
       response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
       return "Error: " + e.getMessage();
     }
-    LOG.info("User {} registered successfully", registerRequest.username());
+    LOG.debug("User {} registered successfully", registerRequest.username());
     return String.format("Welcome, %s", registerRequest.username());
   }
 }
