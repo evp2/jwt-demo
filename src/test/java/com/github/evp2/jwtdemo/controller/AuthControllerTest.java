@@ -3,13 +3,12 @@ package com.github.evp2.jwtdemo.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.github.evp2.jwtdemo.config.SecurityConfig;
-import com.github.evp2.jwtdemo.service.RegisterService;
-import com.github.evp2.jwtdemo.service.TokenService;
+import com.github.evp2.jwtdemo.service.JwtTokenService;
+import com.github.evp2.jwtdemo.service.UserDetailsService;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 @WebMvcTest({AuthController.class})
-@Import({SecurityConfig.class, RegisterService.class, TokenService.class})
+@Import({SecurityConfig.class, UserDetailsService.class, JwtTokenService.class})
 class AuthControllerTest {
 
   @Autowired MockMvc mvc;
@@ -104,19 +103,60 @@ class AuthControllerTest {
   }
 
   @Test
-  void shouldReturnTokenWithUsernameAndPassword() throws Exception {
+  @Order(value = 3)
+  public void shouldReturnErrorForWriteOnlyFields() throws Exception {
+    MvcResult result =
+        this.mvc
+            .perform(
+                post("/login")
+                    .contentType("application/json")
+                    .content(
+                        """
+                  {
+                    "username": "test",
+                    "password": "password"
+                  }
+                """))
+            .andReturn();
+    String jwt = result.getResponse().getContentAsString();
+    mvc.perform(delete("/delete/test").header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt))
+        .andExpect(status().isForbidden())
+        .andReturn();
+  }
+
+  @Test
+  void shouldReturnSuccessForAdminDelete() throws Exception {
     this.mvc
         .perform(
-            post("/login")
+            post("/register")
                 .contentType("application/json")
                 .content(
                     """
+              {
+                "username": "test",
+                "email": "test@email.com",
+                "password": "password"
+              }
+            """))
+        .andExpect(status().isOk());
+    MvcResult result =
+        this.mvc
+            .perform(
+                post("/login")
+                    .contentType("application/json")
+                    .content(
+                        """
                   {
                     "username": "evp2",
                     "password": "password"
                   }
                 """))
-        .andExpect(status().isOk());
+            .andExpect(status().isOk())
+            .andReturn();
+    String jwt = result.getResponse().getContentAsString();
+    mvc.perform(delete("/delete/test").header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt))
+        .andExpect(status().isOk())
+        .andReturn();
   }
 
   @Test
