@@ -16,6 +16,7 @@ import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -40,6 +41,7 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
   @Value("${jwt.key}")
@@ -138,7 +140,7 @@ public class SecurityConfig {
     UserDetails user =
         User.withUsername("evp2")
             .password(passwordEncoder.encode("{noop}password"))
-            .authorities("READ", "ROLE_ADMIN")
+            .authorities("READ", "WRITE", "ROLE_ADMIN")
             .build();
     JdbcUserDetailsManager users = new JdbcUserDetailsManager(dataSource);
     users.createUser(user);

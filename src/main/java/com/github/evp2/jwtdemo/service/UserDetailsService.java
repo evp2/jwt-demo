@@ -11,12 +11,13 @@ import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.stereotype.Service;
 
 @Service
-public class RegisterService {
-  private static final Logger LOG = LoggerFactory.getLogger(RegisterService.class);
+public class UserDetailsService {
+  private static final Logger LOG = LoggerFactory.getLogger(UserDetailsService.class);
   private final UserDetailsManager userDetailsManager;
   private final DataSource userDetailsDataSource;
 
-  public RegisterService(UserDetailsManager userDetailsManager, DataSource userDetailsDataSource) {
+  public UserDetailsService(
+      UserDetailsManager userDetailsManager, DataSource userDetailsDataSource) {
     this.userDetailsManager = userDetailsManager;
     this.userDetailsDataSource = userDetailsDataSource;
   }
@@ -40,6 +41,18 @@ public class RegisterService {
         .prepareStatement(
             "INSERT INTO user_details (username, email) VALUES ('%s', '%s')"
                 .formatted(registerRequest.username(), registerRequest.email()))
+        .executeUpdate();
+  }
+
+  public void deleteUser(String username) throws SQLException {
+    if (!userDetailsManager.userExists(username)) {
+      LOG.warn("User: {} does not exist", username);
+      throw new RuntimeException("User does not exist");
+    }
+    userDetailsManager.deleteUser(username);
+    userDetailsDataSource
+        .getConnection()
+        .prepareStatement("DELETE FROM user_details WHERE username = '%s'".formatted(username))
         .executeUpdate();
   }
 }

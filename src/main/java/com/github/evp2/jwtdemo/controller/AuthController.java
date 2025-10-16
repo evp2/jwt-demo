@@ -2,8 +2,8 @@ package com.github.evp2.jwtdemo.controller;
 
 import com.github.evp2.jwtdemo.model.LoginRequest;
 import com.github.evp2.jwtdemo.model.RegisterRequest;
-import com.github.evp2.jwtdemo.service.RegisterService;
-import com.github.evp2.jwtdemo.service.TokenService;
+import com.github.evp2.jwtdemo.service.JwtTokenService;
+import com.github.evp2.jwtdemo.service.UserDetailsService;
 import jakarta.servlet.http.HttpServletResponse;
 import java.security.Principal;
 import org.slf4j.Logger;
@@ -13,27 +13,24 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class AuthController {
   private static final Logger LOG = LoggerFactory.getLogger(AuthController.class);
   private final AuthenticationManager authenticationManager;
-  private final RegisterService registerService;
-  private final TokenService tokenService;
+  private final UserDetailsService userDetailsService;
+  private final JwtTokenService JwtTokenService;
   private final PasswordEncoder passwordEncoder;
 
   public AuthController(
       AuthenticationManager authenticationManager,
-      RegisterService registerService,
-      TokenService tokenService,
+      UserDetailsService userDetailsService,
+      JwtTokenService JwtTokenService,
       PasswordEncoder passwordEncoder) {
     this.authenticationManager = authenticationManager;
-    this.registerService = registerService;
-    this.tokenService = tokenService;
+    this.userDetailsService = userDetailsService;
+    this.JwtTokenService = JwtTokenService;
     this.passwordEncoder = passwordEncoder;
   }
 
@@ -51,7 +48,7 @@ public class AuthController {
   @PostMapping("/token")
   public String token(Authentication authentication) {
     LOG.info("Token requested for user: '{}'", authentication.getName());
-    String token = tokenService.generateToken(authentication);
+    String token = JwtTokenService.generateToken(authentication);
     LOG.debug("Token granted for: {}", authentication.getName());
     return token;
   }
@@ -63,7 +60,7 @@ public class AuthController {
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(
                 loginRequest.username(), passwordEncoder.encode(loginRequest.password())));
-    String token = tokenService.generateToken(authentication);
+    String token = JwtTokenService.generateToken(authentication);
     LOG.debug("User {} authenticated successfully. JWT: {}", authentication.getName(), token);
     return token;
   }
@@ -73,12 +70,26 @@ public class AuthController {
       @RequestBody RegisterRequest registerRequest, HttpServletResponse response) {
     LOG.info("Register attempt for user: '{}'", registerRequest.username());
     try {
-      registerService.registerUser(registerRequest);
+      userDetailsService.registerUser(registerRequest);
     } catch (Exception e) {
       response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
       return "Error: " + e.getMessage();
     }
     LOG.debug("User {} registered successfully", registerRequest.username());
     return String.format("Welcome, %s", registerRequest.username());
+  }
+
+  @PreAuthorize("hasAuthority('SCOPE_WRITE')")
+  @DeleteMapping("/delete/{username}")
+  public String deleteUser(@PathVariable String username, HttpServletResponse response) {
+    LOG.info("Delete attempt for user: '{}'", username);
+    try {
+      userDetailsService.deleteUser(username);
+    } catch (Exception e) {
+      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      return "Error: " + e.getMessage();
+    }
+    LOG.debug("User {} deleted successfully", username);
+    return String.format("User %s deleted successfully", username);
   }
 }
