@@ -32,7 +32,7 @@ class AuthControllerTest {
   }
 
   @Test
-  void shouldReturnUnauthorizedWithInValidUserCredentials() throws Exception {
+  void shouldReturnUnauthorizedWithInvalidUserCredentials() throws Exception {
     this.mvc
         .perform(post("/token").with(httpBasic("admin", "admin")))
         .andExpect(status().isUnauthorized());
@@ -41,32 +41,7 @@ class AuthControllerTest {
   @Test
   @Order(value = 1)
   void shouldReturnTokenAfterValidRegister() throws Exception {
-    this.mvc
-        .perform(
-            post("/register")
-                .contentType("application/json")
-                .content(
-                    """
-              {
-                "username": "test",
-                "email": "test@email.com",
-                "password": "password"
-              }
-            """))
-        .andExpect(status().isOk());
-    MvcResult result =
-        this.mvc
-            .perform(
-                post("/login")
-                    .contentType("application/json")
-                    .content(
-                        """
-                  {
-                    "username": "test",
-                    "password": "password"
-                  }
-                """))
-            .andReturn();
+    MvcResult result = registerTestUserAuthenticate();
     String jwt = result.getResponse().getContentAsString();
     assertThat(jwt).isNotEmpty();
     MvcResult response =
@@ -103,24 +78,39 @@ class AuthControllerTest {
   }
 
   @Test
-  @Order(value = 3)
-  public void shouldReturnErrorForWriteOnlyFields() throws Exception {
-    MvcResult result =
-        this.mvc
-            .perform(
-                post("/login")
-                    .contentType("application/json")
-                    .content(
-                        """
-                  {
-                    "username": "test",
-                    "password": "password"
-                  }
-                """))
-            .andReturn();
+  public void shouldReturnForbiddenForReadOnlyUser() throws Exception {
+    MvcResult result = registerTestUserAuthenticate();
     String jwt = result.getResponse().getContentAsString();
     mvc.perform(delete("/delete/test").header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt))
         .andExpect(status().isForbidden())
+        .andReturn();
+  }
+
+  private MvcResult registerTestUserAuthenticate() throws Exception {
+    this.mvc
+        .perform(
+            post("/register")
+                .contentType("application/json")
+                .content(
+                    """
+              {
+                "username": "test",
+                "email": "test@email.com",
+                "password": "password"
+              }
+            """))
+        .andReturn();
+    return this.mvc
+        .perform(
+            post("/login")
+                .contentType("application/json")
+                .content(
+                    """
+              {
+                "username": "test",
+                "password": "password"
+              }
+            """))
         .andReturn();
   }
 
@@ -203,5 +193,71 @@ class AuthControllerTest {
             .andReturn();
 
     assertEquals("Hello, evp2", response.getResponse().getContentAsString());
+  }
+
+  @Test
+  void shouldResetPasswordSuccessfully() throws Exception {
+    this.mvc
+        .perform(
+            post("/register")
+                .contentType("application/json")
+                .content(
+                    """
+              {
+                "username": "user",
+                "email": "user@email.com",
+                "password": "password"
+              }
+            """))
+        .andReturn();
+    MvcResult result =
+        this.mvc
+            .perform(
+                post("/login")
+                    .contentType("application/json")
+                    .content(
+                        """
+                  {
+                    "username": "user",
+                    "password": "password"
+                  }
+                """))
+            .andExpect(status().isOk())
+            .andReturn();
+    String jwt = result.getResponse().getContentAsString();
+    mvc.perform(
+            post("/password/reset")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt)
+                .contentType("application/json")
+                .content(
+                    """
+              {
+                "username": "user",
+                "password": "password",
+                "newPassword": "newPassword"
+              }
+            """))
+        .andExpect(status().isOk())
+        .andReturn();
+  }
+
+  @Test
+  void shouldReturnErrorForPasswordResetForAnotherUser() throws Exception {
+    MvcResult result = registerTestUserAuthenticate();
+    String jwt = result.getResponse().getContentAsString();
+    mvc.perform(
+            post("/password/reset")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwt)
+                .contentType("application/json")
+                .content(
+                    """
+              {
+                "username": "evp2",
+                "password": "password",
+                "newPassword": "newpassword"
+              }
+              """))
+        .andExpect(status().isForbidden())
+        .andReturn();
   }
 }
