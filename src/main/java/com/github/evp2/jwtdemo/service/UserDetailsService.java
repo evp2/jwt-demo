@@ -67,6 +67,7 @@ public class UserDetailsService {
       LOG.warn("User: {} does not exist", passwordResetRequest.username());
       throw new RuntimeException("User does not exist");
     }
-    userDetailsManager.changePassword(passwordResetRequest.password(), "{noop}" + passwordResetRequest.newPassword());
+    userDetailsManager.changePassword(
+        passwordResetRequest.password(), "{noop}" + passwordResetRequest.newPassword());
   }
 }

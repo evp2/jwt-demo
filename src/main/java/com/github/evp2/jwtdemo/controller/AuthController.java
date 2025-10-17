@@ -94,9 +94,11 @@ public class AuthController {
     return String.format("User %s deleted successfully", username);
   }
 
-  @PreAuthorize("hasAuthority('SCOPE_WRITE') || authentication.name == #passwordResetRequest.username")
+  @PreAuthorize(
+      "hasAuthority('SCOPE_WRITE') || authentication.name == #passwordResetRequest.username")
   @PostMapping("/password/reset")
-  public String resetPassword(@RequestBody PasswordResetRequest passwordResetRequest, HttpServletResponse response) {
+  public String resetPassword(
+      @RequestBody PasswordResetRequest passwordResetRequest, HttpServletResponse response) {
     LOG.info("Password reset attempt for user: '{}'", passwordResetRequest.username());
     try {
       userDetailsService.resetPassword(passwordResetRequest);
@@ -105,6 +107,7 @@ public class AuthController {
       return "Error: " + e.getMessage();
     }
     LOG.debug("Password for user {} reset successfully", passwordResetRequest.username());
-    return String.format("Password for user %s reset successfully", passwordResetRequest.username());
+    return String.format(
+        "Password for user %s reset successfully", passwordResetRequest.username());
   }
 }

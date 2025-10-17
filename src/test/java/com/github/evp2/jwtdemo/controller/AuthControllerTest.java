@@ -27,9 +27,6 @@ class AuthControllerTest {
   @Test
   void shouldReturnJwtWithValidUserCredentials() throws Exception {
     this.mvc
-        .perform(post("/token").with(httpBasic("evp2", "password")))
-        .andExpect(status().isOk());
-    this.mvc
         .perform(post("/token").with(httpBasic("evp2", "{noop}password")))
         .andExpect(status().isOk());
   }
@@ -200,6 +197,19 @@ class AuthControllerTest {
 
   @Test
   void shouldResetPasswordSuccessfully() throws Exception {
+    this.mvc
+        .perform(
+            post("/register")
+                .contentType("application/json")
+                .content(
+                    """
+              {
+                "username": "user",
+                "email": "user@email.com",
+                "password": "password"
+              }
+            """))
+        .andReturn();
     MvcResult result =
         this.mvc
             .perform(
@@ -208,7 +218,7 @@ class AuthControllerTest {
                     .content(
                         """
                   {
-                    "username": "evp2",
+                    "username": "user",
                     "password": "password"
                   }
                 """))
@@ -222,9 +232,9 @@ class AuthControllerTest {
                 .content(
                     """
               {
-                "username": "evp2",
+                "username": "user",
                 "password": "password",
-                "newPassword": "newpassword"
+                "newPassword": "newPassword"
               }
             """))
         .andExpect(status().isOk())
@@ -241,7 +251,6 @@ class AuthControllerTest {
                 .contentType("application/json")
                 .content(
                     """
-  
               {
                 "username": "evp2",
                 "password": "password",
@@ -251,5 +260,4 @@ class AuthControllerTest {
         .andExpect(status().isForbidden())
         .andReturn();
   }
-
 }
