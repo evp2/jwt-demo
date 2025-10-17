@@ -1,6 +1,7 @@
 package com.github.evp2.jwtdemo.controller;
 
 import com.github.evp2.jwtdemo.model.LoginRequest;
+import com.github.evp2.jwtdemo.model.PasswordResetRequest;
 import com.github.evp2.jwtdemo.model.RegisterRequest;
 import com.github.evp2.jwtdemo.service.JwtTokenService;
 import com.github.evp2.jwtdemo.service.UserDetailsService;
@@ -91,5 +92,19 @@ public class AuthController {
     }
     LOG.debug("User {} deleted successfully", username);
     return String.format("User %s deleted successfully", username);
+  }
+
+  @PreAuthorize("hasAuthority('SCOPE_WRITE') || authentication.name == #passwordResetRequest.username")
+  @PostMapping("/password/reset")
+  public String resetPassword(@RequestBody PasswordResetRequest passwordResetRequest, HttpServletResponse response) {
+    LOG.info("Password reset attempt for user: '{}'", passwordResetRequest.username());
+    try {
+      userDetailsService.resetPassword(passwordResetRequest);
+    } catch (Exception e) {
+      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      return "Error: " + e.getMessage();
+    }
+    LOG.debug("Password for user {} reset successfully", passwordResetRequest.username());
+    return String.format("Password for user %s reset successfully", passwordResetRequest.username());
   }
 }

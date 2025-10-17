@@ -1,5 +1,6 @@
 package com.github.evp2.jwtdemo.service;
 
+import com.github.evp2.jwtdemo.model.PasswordResetRequest;
 import com.github.evp2.jwtdemo.model.RegisterRequest;
 import java.sql.SQLException;
 import java.util.regex.Pattern;
@@ -59,5 +60,13 @@ public class UserDetailsService {
         .getConnection()
         .prepareStatement("DELETE FROM user_details WHERE username = '%s'".formatted(username))
         .executeUpdate();
+  }
+
+  public void resetPassword(PasswordResetRequest passwordResetRequest) {
+    if (!userDetailsManager.userExists(passwordResetRequest.username())) {
+      LOG.warn("User: {} does not exist", passwordResetRequest.username());
+      throw new RuntimeException("User does not exist");
+    }
+    userDetailsManager.changePassword(passwordResetRequest.password(), "{noop}" + passwordResetRequest.newPassword());
   }
 }
